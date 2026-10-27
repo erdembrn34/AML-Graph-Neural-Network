@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 650px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#0099FF", "id": 0, "label": "Hesap 0 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 1, "label": "Hesap 1 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 2, "label": "Hesap 2 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 3, "label": "Hesap 3 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 4, "label": "Hesap 4 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 5, "label": "Hesap 5 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 6, "label": "Hesap 6 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 7, "label": "Hesap 7 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 8, "label": "Hesap 8 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 9, "label": "Hesap 9 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 10, "label": "Hesap 10 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 11, "label": "Hesap 11 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 12, "label": "Hesap 12 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 13, "label": "Hesap 13 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 14, "label": "Hesap 14 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 15, "label": "Hesap 15 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 16, "label": "Hesap 16 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 17, "label": "Hesap 17 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 18, "label": "Hesap 18 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 19, "label": "Hesap 19 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 20, "label": "Hesap 20 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 21, "label": "Hesap 21 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 22, "label": "Hesap 22 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 23, "label": "Hesap 23 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 24, "label": "Hesap 24 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 25, "label": "Hesap 25 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 26, "label": "Hesap 26 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 27, "label": "Hesap 27 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 28, "label": "Hesap 28 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 29, "label": "Hesap 29 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 30, "label": "Hesap 30 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 31, "label": "Hesap 31 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 32, "label": "Hesap 32 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 33, "label": "Hesap 33 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 34, "label": "Hesap 34 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 35, "label": "Hesap 35 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 36, "label": "Hesap 36 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 37, "label": "Hesap 37 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 38, "label": "Hesap 38 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 39, "label": "Hesap 39 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 40, "label": "Hesap 40 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 41, "label": "Hesap 41 (Temiz)", "shape": "dot", "size": 10}, {"color": "#FF0055", "id": 42, "label": "Hesap 42 (\u015e\u00dcPHEL\u0130)", "shape": "dot", "size": 20}, {"color": "#0099FF", "id": 43, "label": "Hesap 43 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 44, "label": "Hesap 44 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 45, "label": "Hesap 45 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 46, "label": "Hesap 46 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 47, "label": "Hesap 47 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 48, "label": "Hesap 48 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 49, "label": "Hesap 49 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 50, "label": "Hesap 50 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 51, "label": "Hesap 51 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 52, "label": "Hesap 52 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 53, "label": "Hesap 53 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 54, "label": "Hesap 54 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 55, "label": "Hesap 55 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 56, "label": "Hesap 56 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 57, "label": "Hesap 57 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 58, "label": "Hesap 58 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 59, "label": "Hesap 59 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 60, "label": "Hesap 60 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 61, "label": "Hesap 61 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 62, "label": "Hesap 62 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 63, "label": "Hesap 63 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 64, "label": "Hesap 64 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 65, "label": "Hesap 65 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 66, "label": "Hesap 66 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 67, "label": "Hesap 67 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 68, "label": "Hesap 68 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 69, "label": "Hesap 69 (Temiz)", "shape": "dot", "size": 10}, {"color": "#FF0055", "id": 70, "label": "Hesap 70 (\u015e\u00dcPHEL\u0130)", "shape": "dot", "size": 20}, {"color": "#0099FF", "id": 71, "label": "Hesap 71 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 72, "label": "Hesap 72 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 73, "label": "Hesap 73 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 74, "label": "Hesap 74 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 75, "label": "Hesap 75 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 76, "label": "Hesap 76 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 77, "label": "Hesap 77 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 78, "label": "Hesap 78 (Temiz)", "shape": "dot", "size": 10}, {"color": "#0099FF", "id": 79, "label": "Hesap 79 (Temiz)", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#AAAAAA", "from": 56, "to": 2}, {"arrows": "to", "color": "#AAAAAA", "from": 75, "to": 3}, {"arrows": "to", "color": "#AAAAAA", "from": 37, "to": 76}, {"arrows": "to", "color": "#AAAAAA", "from": 67, "to": 42}, {"arrows": "to", "color": "#AAAAAA", "from": 3, "to": 60}, {"arrows": "to", "color": "#AAAAAA", "from": 65, "to": 10}, {"arrows": "to", "color": "#AAAAAA", "from": 20, "to": 30}, {"arrows": "to", "color": "#AAAAAA", "from": 11, "to": 48}, {"arrows": "to", "color": "#AAAAAA", "from": 51, "to": 31}, {"arrows": "to", "color": "#AAAAAA", "from": 56, "to": 7}, {"arrows": "to", "color": "#AAAAAA", "from": 21, "to": 69}, {"arrows": "to", "color": "#AAAAAA", "from": 79, "to": 25}, {"arrows": "to", "color": "#AAAAAA", "from": 51, "to": 66}, {"arrows": "to", "color": "#AAAAAA", "from": 19, "to": 28}, {"arrows": "to", "color": "#AAAAAA", "from": 33, "to": 7}, {"arrows": "to", "color": "#AAAAAA", "from": 48, "to": 60}, {"arrows": "to", "color": "#AAAAAA", "from": 28, "to": 0}, {"arrows": "to", "color": "#AAAAAA", "from": 42, "to": 70}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
